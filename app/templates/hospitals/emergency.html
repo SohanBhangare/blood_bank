@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block title %}Emergency Blood SOS Live Feed - LifeFlow{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Emergency Broadcast Banner -->
+    <div class="bg-gradient-to-r from-red-600 via-rose-700 to-rose-900 rounded-3xl p-8 text-white shadow-xl relative overflow-hidden">
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+                <div class="inline-flex items-center px-3 py-1 rounded-full text-xs font-black bg-white/20 text-white backdrop-blur-md mb-2">
+                    <span class="w-2.5 h-2.5 rounded-full bg-white mr-2 animate-ping"></span> LIVE EMERGENCY SOS BEACON
+                </div>
+                <h1 class="text-3xl font-black tracking-tight">Active Emergency Blood Needs Nearby</h1>
+                <p class="text-xs text-rose-100 mt-1 max-w-xl">
+                    Patients in immediate critical condition requiring emergency blood transfusions. If your blood group matches and you are eligible, your donation can save a life today.
+                </p>
+            </div>
+
+            <div class="flex items-center space-x-3">
+                <a href="{{ url_for('camps.index') }}" class="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white text-xs font-bold transition-all flex items-center">
+                    <i class="fa-solid fa-tent mr-2"></i> Active Donation Camps
+                </a>
+                <a href="{{ url_for('hospitals.index') }}" class="px-4 py-2.5 rounded-xl bg-white text-rose-700 hover:bg-rose-50 text-xs font-bold shadow-md transition-all flex items-center">
+                    <i class="fa-solid fa-hospital mr-2"></i> Hospitals Directory
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+        <form method="GET" action="{{ url_for('hospitals.emergency_feed') }}" class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+                <select name="city" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    <option value="">All Locations / Cities</option>
+                    {% for c in cities %}
+                    <option value="{{ c }}" {% if selected_city == c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <select name="blood_group" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    <option value="">All Blood Groups Needed</option>
+                    <option value="O-" {% if selected_bg == 'O-' %}selected{% endif %}>O- (Universal Donor)</option>
+                    <option value="O+" {% if selected_bg == 'O+' %}selected{% endif %}>O+</option>
+                    <option value="A-" {% if selected_bg == 'A-' %}selected{% endif %}>A-</option>
+                    <option value="A+" {% if selected_bg == 'A+' %}selected{% endif %}>A+</option>
+                    <option value="B-" {% if selected_bg == 'B-' %}selected{% endif %}>B-</option>
+                    <option value="B+" {% if selected_bg == 'B+' %}selected{% endif %}>B+</option>
+                    <option value="AB-" {% if selected_bg == 'AB-' %}selected{% endif %}>AB-</option>
+                    <option value="AB+" {% if selected_bg == 'AB+' %}selected{% endif %}>AB+</option>
+                </select>
+            </div>
+
+            <div>
+                <button type="submit" class="w-full py-2 bg-slate-900 text-white rounded-xl text-xs font-semibold hover:bg-slate-800 transition-all">
+                    Filter Urgent Needs
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Emergency Requests Feed -->
+    <div class="space-y-4">
+        {% if urgent_requests %}
+            {% for req in urgent_requests %}
+            <div class="bg-white rounded-2xl border-2 p-6 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row md:items-center justify-between gap-5
+                {% if req.urgency == 'Emergency' %}border-rose-300 bg-rose-50/20{% else %}border-amber-300 bg-amber-50/20{% endif %}">
+                
+                <div class="flex items-start space-x-4">
+                    <!-- Big Blood Group Badge -->
+                    <div class="w-16 h-16 rounded-2xl flex flex-col items-center justify-center font-black text-white text-xl shadow-lg flex-shrink-0
+                        {% if req.urgency == 'Emergency' %}bg-gradient-to-tr from-rose-600 to-red-600 shadow-rose-200 animate-pulse{% else %}bg-gradient-to-tr from-amber-500 to-orange-500 shadow-amber-200{% endif %}">
+                        <span>{{ req.required_blood_group }}</span>
+                        <span class="text-[9px] font-semibold uppercase -mt-1">Needed</span>
+                    </div>
+
+                    <div class="space-y-1">
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider
+                                {% if req.urgency == 'Emergency' %}bg-rose-100 text-rose-800 border border-rose-300 animate-pulse
+                                {% else %}bg-amber-100 text-amber-800 border border-amber-300{% endif %}">
+                                &bull; {{ req.urgency }} Priority
+                            </span>
+                            <span class="text-xs font-semibold text-slate-500">{{ req.city or 'Pune' }}</span>
+                            <span class="text-xs text-slate-400">&bull; Request #{{ req.id }}</span>
+                        </div>
+
+                        <h3 class="text-lg font-bold text-slate-900">{{ req.hospital_name }}</h3>
+                        <p class="text-xs text-slate-600">
+                            Patient: <strong class="text-slate-800">{{ req.patient_name }}</strong> ({{ req.patient_age or 'Age N/A' }} yrs) &bull; Required: <strong class="text-rose-700">{{ req.units_requested - req.units_allocated }} unit(s) of {{ req.component }}</strong>
+                        </p>
+
+                        {% if req.diagnosis_reason %}
+                        <div class="text-xs text-slate-500 italic mt-1">
+                            <i class="fa-solid fa-stethoscope mr-1 text-slate-400"></i> Diagnosis: {{ req.diagnosis_reason }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Contact & Action Buttons -->
+                <div class="flex flex-col sm:flex-row md:flex-col lg:flex-row items-stretch sm:items-center gap-2 flex-shrink-0">
+                    <a href="tel:{{ req.contact_phone }}" class="px-4 py-2.5 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-800 font-semibold text-xs flex items-center justify-center transition-all">
+                        <i class="fa-solid fa-phone mr-1.5 text-rose-600"></i> Call: {{ req.contact_phone }}
+                    </a>
+
+                    {% if current_user.is_authenticated and current_user.is_staff %}
+                    <a href="{{ url_for('requests.view_request', id=req.id) }}" class="px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs flex items-center justify-center shadow transition-all">
+                        <i class="fa-solid fa-box mr-1.5"></i> Allocate Stock
+                    </a>
+                    {% else %}
+                    <a href="tel:{{ req.contact_phone }}" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white font-bold text-xs flex items-center justify-center shadow-md shadow-rose-200 transition-all">
+                        <i class="fa-solid fa-hand-holding-heart mr-2"></i> I Can Donate &rarr;
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="bg-white rounded-2xl border border-slate-200/80 p-12 text-center text-slate-400">
+                <i class="fa-solid fa-shield-heart text-4xl mb-3 text-emerald-400 block"></i>
+                <h4 class="text-base font-bold text-slate-800">No active emergency alerts in this area right now!</h4>
+                <p class="text-xs text-slate-500 mt-1">Current urgent requirements are fulfilled or under stable dispatch.</p>
+                <div class="mt-4">
+                    <a href="{{ url_for('camps.index') }}" class="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold shadow">
+                        Visit Ongoing Blood Camps &rarr;
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

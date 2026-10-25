@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block title %}Add External Blood Unit - LifeFlow{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto py-4">
+    <div class="mb-4">
+        <a href="{{ url_for('inventory.index') }}" class="text-xs font-semibold text-slate-500 hover:text-slate-800">
+            &larr; Back to Inventory
+        </a>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+        <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h1 class="text-xl font-bold text-slate-900">Catalog External Blood Bag</h1>
+                <p class="text-xs text-slate-500">Add blood units received from partner blood banks, donation drives, or central reserves.</p>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+                <i class="fa-solid fa-boxes-stacked"></i>
+            </div>
+        </div>
+
+        <form method="POST" class="p-6 space-y-5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Blood Group *</label>
+                    <select name="blood_group" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                        <option value="">Select Blood Group</option>
+                        {% for bg in blood_groups %}
+                        <option value="{{ bg }}">{{ bg }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Component Type *</label>
+                    <select name="component" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                        {% for comp in components %}
+                        <option value="{{ comp }}">{{ comp }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Units (Bags) *</label>
+                    <input type="number" min="1" max="10" name="units" value="1" required
+                           class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Collection Date *</label>
+                    <input type="date" name="collection_date" value="{{ today.strftime('%Y-%m-%d') }}" required
+                           class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Cold Storage Location *</label>
+                    <input type="text" name="storage_location" value="Cold Storage A - Shelf 1" required
+                           class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Batch / Source Notes</label>
+                    <textarea name="notes" rows="2" placeholder="e.g. Received from Red Cross Central Drive..."
+                              class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"></textarea>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-slate-100 flex items-center justify-end space-x-3">
+                <a href="{{ url_for('inventory.index') }}" class="px-4 py-2 border border-slate-300 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-50">
+                    Cancel
+                </a>
+                <button type="submit" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl shadow-md shadow-rose-200 transition-all flex items-center">
+                    <i class="fa-solid fa-plus mr-1.5"></i> Catalog Blood Unit
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

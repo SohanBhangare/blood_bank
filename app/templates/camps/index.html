@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Blood Donation Camps & Drives - LifeFlow{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <div class="flex items-center space-x-2">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800">
+                    <span class="w-2 h-2 rounded-full bg-rose-600 mr-1.5 animate-pulse"></span> Live Community Drives
+                </span>
+            </div>
+            <h1 class="text-2xl font-black tracking-tight text-slate-900 mt-1">Blood Donation Camps Near You</h1>
+            <p class="text-slate-500 text-sm">Find mobile blood banks, college drives, and community donation camps currently active.</p>
+        </div>
+
+        {% if current_user.is_authenticated and current_user.is_staff %}
+        <a href="{{ url_for('camps.add_camp') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-semibold rounded-xl text-white bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-200 transition-all">
+            <i class="fa-solid fa-plus mr-1.5"></i> Schedule New Camp
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+        <form method="GET" action="{{ url_for('camps.index') }}" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div class="sm:col-span-2">
+                <select name="city" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    <option value="">All Cities</option>
+                    {% for c in cities %}
+                    <option value="{{ c }}" {% if selected_city == c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <select name="status" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    <option value="">All Camp Statuses</option>
+                    <option value="Ongoing" {% if selected_status == 'Ongoing' %}selected{% endif %}>Ongoing Right Now</option>
+                    <option value="Upcoming" {% if selected_status == 'Upcoming' %}selected{% endif %}>Upcoming This Week/Month</option>
+                    <option value="Completed" {% if selected_status == 'Completed' %}selected{% endif %}>Completed</option>
+                </select>
+            </div>
+
+            <div>
+                <button type="submit" class="w-full py-2 bg-slate-900 text-white rounded-xl text-xs font-semibold hover:bg-slate-800 transition-all">
+                    Filter Camps
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Camps Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {% if camps %}
+            {% for camp in camps %}
+            <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow overflow-hidden flex flex-col justify-between">
+                <div>
+                    <!-- Top Ribbon -->
+                    <div class="p-5 pb-4 border-b border-slate-100 flex items-start justify-between gap-3">
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider
+                                    {% if camp.status == 'Ongoing' %}bg-emerald-100 text-emerald-800 border border-emerald-300 animate-pulse
+                                    {% elif camp.status == 'Upcoming' %}bg-blue-100 text-blue-800 border border-blue-300
+                                    {% else %}bg-slate-100 text-slate-600{% endif %}">
+                                    {% if camp.status == 'Ongoing' %}&bull; ONGOING TODAY{% else %}{{ camp.status }}{% endif %}
+                                </span>
+                                <span class="text-xs text-slate-400 font-medium">{{ camp.city }}</span>
+                            </div>
+                            <h3 class="text-base font-bold text-slate-900 mt-1.5">{{ camp.name }}</h3>
+                            <p class="text-xs text-slate-500 mt-0.5">Organized by <strong class="text-slate-700">{{ camp.organizer }}</strong></p>
+                        </div>
+                        <div class="w-12 h-12 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600 flex-shrink-0">
+                            <i class="fa-solid fa-truck-droplet text-xl"></i>
+                        </div>
+                    </div>
+
+                    <!-- Details Body -->
+                    <div class="p-5 space-y-3 text-xs">
+                        <div class="flex items-start space-x-2.5 text-slate-700">
+                            <i class="fa-solid fa-location-dot text-rose-600 mt-0.5 w-4 text-center"></i>
+                            <div>
+                                <strong class="text-slate-900">{{ camp.venue }}</strong>
+                                <div class="text-slate-500 text-[11px]">{{ camp.city }}, {{ camp.state }} {{ camp.pincode or '' }}</div>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-2.5 text-slate-700">
+                            <i class="fa-solid fa-calendar-days text-slate-400 w-4 text-center"></i>
+                            <span>
+                                {{ camp.start_date.strftime('%b %d, %Y') }}
+                                {% if camp.start_date != camp.end_date %} to {{ camp.end_date.strftime('%b %d, %Y') }}{% endif %}
+                                &bull; <strong class="text-slate-800">{{ camp.operating_hours }}</strong>
+                            </span>
+                        </div>
+
+                        <div class="flex items-center space-x-2.5 text-slate-700">
+                            <i class="fa-solid fa-phone text-slate-400 w-4 text-center"></i>
+                            <span>Coordinator: <strong>{{ camp.contact_person }}</strong> ({{ camp.contact_phone }})</span>
+                        </div>
+
+                        {% if camp.facilities %}
+                        <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 text-[11px] text-slate-600 flex items-center space-x-2">
+                            <i class="fa-solid fa-circle-check text-emerald-600"></i>
+                            <span>{{ camp.facilities }}</span>
+                        </div>
+                        {% endif %}
+
+                        <!-- Progress Bar -->
+                        <div class="pt-2">
+                            <div class="flex items-center justify-between text-[11px] mb-1 font-semibold">
+                                <span class="text-slate-500">Collected Progress</span>
+                                <span class="text-slate-900">{{ camp.collected_units }} / {{ camp.target_units }} Units Target</span>
+                            </div>
+                            {% set pct = (camp.collected_units / camp.target_units * 100)|round if camp.target_units > 0 else 0 %}
+                            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                <div class="bg-gradient-to-r from-rose-500 to-red-600 h-2 rounded-full" style="width: {{ pct if pct <= 100 else 100 }}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Footer Actions -->
+                <div class="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                    <a href="https://maps.google.com/?q={{ camp.venue|urlencode }}+{{ camp.city|urlencode }}" target="_blank" class="text-xs font-semibold text-rose-600 hover:text-rose-800 flex items-center">
+                        <i class="fa-solid fa-diamond-turn-right mr-1.5"></i> Get Directions
+                    </a>
+
+                    {% if camp.status != 'Completed' %}
+                        {% if current_user.is_authenticated %}
+                        <form action="{{ url_for('camps.rsvp_camp', id=camp.id) }}" method="POST">
+                            <button type="submit" class="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl shadow-sm transition-all flex items-center">
+                                <i class="fa-solid fa-hand-holding-heart mr-1.5"></i> Pledge to Donate Here
+                            </button>
+                        </form>
+                        {% else %}
+                        <a href="{{ url_for('auth.login') }}" class="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-xl shadow-sm transition-all">
+                            Sign in to Pledge
+                        </a>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-span-2 bg-white rounded-2xl border border-slate-200/80 p-12 text-center text-slate-400">
+                <i class="fa-solid fa-tent-arrows-down text-4xl mb-3 text-slate-300 block"></i>
+                <h4 class="text-sm font-bold text-slate-700">No donation camps found in this area</h4>
+                <p class="text-xs text-slate-500 mt-1">Check back soon or explore partner hospitals taking direct walk-in donations.</p>
+                <div class="mt-4">
+                    <a href="{{ url_for('hospitals.index') }}" class="px-4 py-2 bg-rose-600 text-white rounded-xl text-xs font-bold shadow">
+                        View Hospitals Accepting Blood &rarr;
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

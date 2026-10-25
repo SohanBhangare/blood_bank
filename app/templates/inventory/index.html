@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}Blood Inventory - LifeFlow{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-black tracking-tight text-slate-900">Blood Inventory Management</h1>
+            <p class="text-slate-500 text-sm">Cold storage unit tracking, batch expiration monitoring, and component logistics.</p>
+        </div>
+        <div class="flex items-center space-x-2">
+            <a href="{{ url_for('inventory.check_expired') }}" class="inline-flex items-center px-3 py-2 border border-slate-300 text-xs font-semibold rounded-xl text-slate-700 bg-white hover:bg-slate-50 shadow-sm transition-all" title="Refresh expiration tags">
+                <i class="fa-solid fa-clock-rotate-left mr-1.5 text-amber-500"></i> Check Expiry
+            </a>
+            <a href="{{ url_for('reports.export_inventory_csv') }}" class="inline-flex items-center px-3 py-2 border border-slate-300 text-xs font-semibold rounded-xl text-slate-700 bg-white hover:bg-slate-50 shadow-sm transition-all">
+                <i class="fa-solid fa-file-csv mr-1.5 text-emerald-600"></i> Export CSV
+            </a>
+            <a href="{{ url_for('inventory.add_unit') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-semibold rounded-xl text-white bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-200 transition-all">
+                <i class="fa-solid fa-plus mr-1.5"></i> Add External Bag
+            </a>
+        </div>
+    </div>
+
+    <!-- Stock Summary Cards -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
+        {% for bg in blood_groups %}
+        {% set stats = group_stats[bg] %}
+        <div class="p-3 bg-white rounded-xl border border-slate-200/80 shadow-sm text-center">
+            <span class="px-2 py-0.5 font-bold text-xs rounded uppercase
+                {% if stats.available < 3 %}bg-rose-100 text-rose-800
+                {% elif stats.available < 5 %}bg-amber-100 text-amber-800
+                {% else %}bg-slate-100 text-slate-800{% endif %}">
+                {{ bg }}
+            </span>
+            <div class="mt-2 text-2xl font-black text-slate-900">{{ stats.available }}</div>
+            <div class="text-[10px] text-slate-400 font-medium">
+                {{ stats.reserved }} reserved
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Search & Filters -->
+    <div class="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-sm">
+        <form method="GET" action="{{ url_for('inventory.index') }}" class="grid grid-cols-1 sm:grid-cols-5 gap-3">
+            <div class="sm:col-span-2 relative">
+                <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-400">
+                    <i class="fa-solid fa-barcode text-xs"></i>
+                </div>
+                <input type="text" name="search" value="{{ search }}" placeholder="Search by bag barcode or location..."
+                       class="w-full pl-9 pr-3.5 py-2 rounded-xl border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500">
+            </div>
+
+            <div>
+                <select name="blood_group" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    <option value="">All Blood Groups</option>
+                    {% for bg in blood_groups %}
+                    <option value="{{ bg }}" {% if selected_bg == bg %}selected{% endif %}>{{ bg }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <select name="status" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    <option value="">All Statuses</option>
+                    <option value="Available" {% if selected_status == 'Available' %}selected{% endif %}>Available</option>
+                    <option value="Reserved" {% if selected_status == 'Reserved' %}selected{% endif %}>Reserved</option>
+                    <option value="Dispatched" {% if selected_status == 'Dispatched' %}selected{% endif %}>Dispatched</option>
+                    <option value="Expired" {% if selected_status == 'Expired' %}selected{% endif %}>Expired</option>
+                    <option value="Discarded" {% if selected_status == 'Discarded' %}selected{% endif %}>Discarded</option>
+                </select>
+            </div>
+
+            <div class="flex space-x-2">
+                <select name="component" class="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    <option value="">All Components</option>
+                    {% for c in components %}
+                    <option value="{{ c }}" {% if selected_component == c %}selected{% endif %}>{{ c }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="px-4 py-2 bg-slate-900 text-white rounded-xl text-xs font-semibold hover:bg-slate-800 transition-all">
+                    Filter
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Inventory Table -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+                        <th class="py-3 px-4">Bag Barcode</th>
+                        <th class="py-3 px-4">Blood Group</th>
+                        <th class="py-3 px-4">Component</th>
+                        <th class="py-3 px-4">Collection Date</th>
+                        <th class="py-3 px-4">Expiry Date</th>
+                        <th class="py-3 px-4">Storage Location</th>
+                        <th class="py-3 px-4">Status</th>
+                        <th class="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% if units %}
+                        {% for u in units %}
+                        <tr class="hover:bg-slate-50/80 transition-colors">
+                            <td class="py-3 px-4 font-mono font-bold text-slate-900">
+                                <div class="flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-barcode text-slate-400"></i>
+                                    <span>{{ u.bag_barcode }}</span>
+                                </div>
+                            </td>
+                            <td class="py-3 px-4">
+                                <span class="px-2.5 py-1 font-black text-xs rounded-lg
+                                    {% if 'AB' in u.blood_group %}bg-purple-100 text-purple-800
+                                    {% elif 'O' in u.blood_group %}bg-rose-100 text-rose-800
+                                    {% else %}bg-sky-100 text-sky-800{% endif %}">
+                                    {{ u.blood_group }}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4 text-slate-700 font-medium">
+                                {{ u.component }}
+                            </td>
+                            <td class="py-3 px-4 text-slate-600">
+                                {{ u.collection_date.strftime('%b %d, %Y') }}
+                            </td>
+                            <td class="py-3 px-4">
+                                {% set days_left = u.days_until_expiry %}
+                                <div>{{ u.expiry_date.strftime('%b %d, %Y') }}</div>
+                                {% if u.status == 'Available' %}
+                                    {% if days_left < 0 %}
+                                        <span class="text-[10px] font-bold text-red-600">Expired</span>
+                                    {% elif days_left <= 5 %}
+                                        <span class="text-[10px] font-bold text-amber-600">{{ days_left }} days left (Soon!)</span>
+                                    {% else %}
+                                        <span class="text-[10px] text-slate-400">{{ days_left }} days left</span>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-slate-600">
+                                <span class="px-2 py-0.5 bg-slate-100 rounded text-[11px] font-medium text-slate-700">
+                                    {{ u.storage_location }}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4">
+                                <span class="px-2.5 py-1 rounded-full font-semibold border text-[10px] {{ u.status|badge_status }}">
+                                    {{ u.status }}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4 text-right">
+                                {% if u.status == 'Available' or u.status == 'Expired' %}
+                                <form action="{{ url_for('inventory.discard_unit', id=u.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to discard unit {{ u.bag_barcode }}?');" class="inline">
+                                    <button type="submit" class="px-2.5 py-1 rounded-lg text-slate-500 hover:text-red-700 hover:bg-red-50 text-xs font-medium transition-colors" title="Discard Unit">
+                                        <i class="fa-solid fa-trash-can mr-1"></i> Discard
+                                    </button>
+                                </form>
+                                {% else %}
+                                <span class="text-slate-400 text-[11px] italic">No action</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" class="py-12 text-center text-slate-400 text-sm">
+                                <i class="fa-solid fa-box-open text-3xl mb-2 text-slate-300 block"></i>
+                                No blood bags found matching the filter criteria.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if pagination.pages > 1 %}
+        <div class="p-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+            <div>Showing page {{ pagination.page }} of {{ pagination.pages }} ({{ pagination.total }} units)</div>
+            <div class="flex space-x-1">
+                {% if pagination.has_prev %}
+                <a href="{{ url_for('inventory.index', page=pagination.prev_num, blood_group=selected_bg, status=selected_status, component=selected_component, search=search) }}" class="px-3 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 font-medium">&larr; Prev</a>
+                {% endif %}
+                {% if pagination.has_next %}
+                <a href="{{ url_for('inventory.index', page=pagination.next_num, blood_group=selected_bg, status=selected_status, component=selected_component, search=search) }}" class="px-3 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 font-medium">Next &rarr;</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

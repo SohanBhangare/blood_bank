@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+
+{% block title %}Request #{{ req.id }} - {{ req.patient_name }} - LifeFlow{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <a href="{{ url_for('requests.list_requests') }}" class="text-xs font-semibold text-slate-500 hover:text-slate-800">
+            &larr; Back to Requests List
+        </a>
+        <div class="flex items-center space-x-2">
+            <span class="px-3 py-1 rounded-full text-xs font-bold border {{ req.urgency|badge_status }}">
+                {{ req.urgency }} Urgency
+            </span>
+            <span class="px-3 py-1 rounded-full text-xs font-semibold border {{ req.status|badge_status }}">
+                {{ req.status }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Main Request Overview Card -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-6 bg-gradient-to-r from-slate-900 to-slate-800 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="flex items-center space-x-4">
+                <div class="w-16 h-16 rounded-2xl bg-rose-600 flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-rose-900/40">
+                    {{ req.required_blood_group }}
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <h1 class="text-xl font-bold">{{ req.patient_name }}</h1>
+                        <span class="text-xs bg-white/10 px-2 py-0.5 rounded text-slate-300">Request #{{ req.id }}</span>
+                    </div>
+                    <div class="text-xs text-slate-300 mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                        <span><i class="fa-solid fa-hospital mr-1 text-slate-400"></i> {{ req.hospital_name }}</span>
+                        <span><i class="fa-solid fa-user-doctor mr-1 text-slate-400"></i> Dr. {{ req.doctor_name or 'N/A' }}</span>
+                        <span><i class="fa-solid fa-droplet mr-1 text-slate-400"></i> {{ req.component }} &bull; Need {{ req.units_requested }} unit(s)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Allocation Stats & Dispatch Trigger -->
+            <div class="text-right flex flex-col sm:items-end">
+                <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">Units Allocated</div>
+                <div class="text-2xl font-black text-white mt-0.5">
+                    {{ req.units_allocated }} <span class="text-sm font-normal text-slate-400">/ {{ req.units_requested }} units</span>
+                </div>
+                {% if req.status == 'Approved' or (req.status == 'Pending' and req.units_allocated > 0) %}
+                <button onclick="document.getElementById('dispatchModal').classList.remove('hidden')" class="mt-2 inline-flex items-center px-4 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition-all">
+                    <i class="fa-solid fa-truck-fast mr-1.5"></i> Dispatch Allocated Units
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100 p-6 text-xs">
+            <div class="space-y-2.5 pb-4 md:pb-0 md:pr-4">
+                <span class="font-bold text-slate-400 uppercase tracking-wider block text-[10px]">Patient & Clinical Case</span>
+                <div>
+                    <span class="text-slate-500 block">Demographics</span>
+                    <span class="font-semibold text-slate-800">{{ req.patient_gender or 'Not specified' }}, {{ req.patient_age or 'N/A' }} yrs old</span>
+                </div>
+                <div>
+                    <span class="text-slate-500 block">Clinical Indication / Diagnosis</span>
+                    <span class="font-medium text-slate-800">{{ req.diagnosis_reason or 'No diagnostic details provided.' }}</span>
+                </div>
+            </div>
+
+            <div class="space-y-2.5 py-4 md:py-0 md:px-4">
+                <span class="font-bold text-slate-400 uppercase tracking-wider block text-[10px]">Hospital & Contact</span>
+                <div>
+                    <span class="text-slate-500 block">Hospital Contact Phone</span>
+                    <span class="font-semibold text-slate-800">{{ req.hospital_contact or '-' }}</span>
+                </div>
+                <div>
+                    <span class="text-slate-500 block">Attendant / Pickup Person</span>
+                    <span class="font-semibold text-slate-800">{{ req.contact_person }} ({{ req.contact_phone }})</span>
+                </div>
+            </div>
+
+            <div class="space-y-2.5 pt-4 md:pt-0 md:pl-4">
+                <span class="font-bold text-slate-400 uppercase tracking-wider block text-[10px]">Timeline & Dates</span>
+                <div>
+                    <span class="text-slate-500 block">Request Logged On</span>
+                    <span class="font-medium text-slate-800">{{ req.request_date.strftime('%B %d, %Y') }}</span>
+                </div>
+                <div>
+                    <span class="text-slate-500 block">Target Needed Date</span>
+                    <span class="font-semibold text-slate-800">
+                        {{ req.required_by_date.strftime('%B %d, %Y') if req.required_by_date else 'Immediate / As soon as possible' }}
+                    </span>
+                </div>
+                {% if req.rejection_reason %}
+                <div class="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-800">
+                    <strong>Rejection reason:</strong> {{ req.rejection_reason }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Blood Compatibility Bar -->
+    <div class="bg-indigo-50/70 border border-indigo-200/80 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div class="flex items-center space-x-3">
+            <div class="w-8 h-8 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-700 flex-shrink-0">
+                <i class="fa-solid fa-dna text-sm"></i>
+            </div>
+            <div>
+                <span class="font-bold text-indigo-950">Compatible Donor Blood Groups for Patient ({{ req.required_blood_group }}):</span>
+                <span class="ml-2 font-mono font-bold text-indigo-700">
+                    {% for cg in compatible_groups %}
+                        <span class="inline-block px-2 py-0.5 rounded bg-indigo-100 text-indigo-900 border border-indigo-200 mr-1">{{ cg }}</span>
+                    {% endfor %}
+                </span>
+            </div>
+        </div>
+        <div class="text-[11px] text-indigo-600">
+            System automatically surfaces exact and safe cross-match units below.
+        </div>
+    </div>
+
+    <!-- Allocated Units Section -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h3 class="text-base font-bold text-slate-900 flex items-center">
+                    <i class="fa-solid fa-box-archive text-emerald-600 mr-2"></i> Reserved / Allocated Blood Bags ({{ allocated_units|length }})
+                </h3>
+                <p class="text-xs text-slate-500">Blood units locked exclusively for this patient request</p>
+            </div>
+            {% if req.status != 'Dispatched' and req.status != 'Rejected' and allocated_units %}
+            <button onclick="document.getElementById('dispatchModal').classList.remove('hidden')" class="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-colors flex items-center">
+                <i class="fa-solid fa-truck-fast mr-1.5"></i> Proceed to Dispatch
+            </button>
+            {% endif %}
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+                        <th class="py-3 px-4">Bag Barcode</th>
+                        <th class="py-3 px-4">Blood Group</th>
+                        <th class="py-3 px-4">Component</th>
+                        <th class="py-3 px-4">Storage Location</th>
+                        <th class="py-3 px-4">Expiry Date</th>
+                        <th class="py-3 px-4">Unit Status</th>
+                        {% if req.status != 'Dispatched' %}
+                        <th class="py-3 px-4 text-right">Actions</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% if allocated_units %}
+                        {% for unit in allocated_units %}
+                        <tr class="hover:bg-slate-50/80">
+                            <td class="py-3 px-4 font-mono font-bold text-slate-900">{{ unit.bag_barcode }}</td>
+                            <td class="py-3 px-4">
+                                <span class="px-2 py-0.5 rounded font-bold bg-rose-100 text-rose-800">{{ unit.blood_group }}</span>
+                            </td>
+                            <td class="py-3 px-4 text-slate-700">{{ unit.component }}</td>
+                            <td class="py-3 px-4 text-slate-600">{{ unit.storage_location }}</td>
+                            <td class="py-3 px-4 text-slate-600">{{ unit.expiry_date.strftime('%b %d, %Y') }}</td>
+                            <td class="py-3 px-4">
+                                <span class="px-2.5 py-1 rounded-full font-semibold border text-[10px] {{ unit.status|badge_status }}">
+                                    {{ unit.status }}
+                                </span>
+                            </td>
+                            {% if req.status != 'Dispatched' %}
+                            <td class="py-3 px-4 text-right">
+                                <form action="{{ url_for('requests.unallocate_unit', id=req.id, unit_id=unit.id) }}" method="POST" class="inline">
+                                    <button type="submit" class="text-rose-600 hover:text-rose-800 text-xs font-semibold">
+                                        Release / Unreserve
+                                    </button>
+                                </form>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="py-8 text-center text-slate-400">
+                                No units allocated yet. Allocate matching units below.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Available Compatible Inventory Units to Allocate -->
+    {% if req.status in ['Pending', 'Approved', 'Partially Dispatched'] and req.units_allocated < req.units_requested %}
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h3 class="text-base font-bold text-slate-900 flex items-center">
+                    <i class="fa-solid fa-check-double text-rose-600 mr-2"></i> Available In-Stock Units for Immediate Allocation
+                </h3>
+                <p class="text-xs text-slate-500">Units in stock compatible with {{ req.required_blood_group }} (Sorted by exact group & earliest expiry date)</p>
+            </div>
+            <span class="text-xs font-bold text-slate-500">{{ available_units|length }} unit(s) ready</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+                        <th class="py-3 px-4">Bag Barcode</th>
+                        <th class="py-3 px-4">Blood Group</th>
+                        <th class="py-3 px-4">Component</th>
+                        <th class="py-3 px-4">Storage Location</th>
+                        <th class="py-3 px-4">Expiry Date</th>
+                        <th class="py-3 px-4">Compatibility</th>
+                        <th class="py-3 px-4 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% if available_units %}
+                        {% for unit in available_units %}
+                        <tr class="hover:bg-slate-50/80">
+                            <td class="py-3 px-4 font-mono font-bold text-slate-900">{{ unit.bag_barcode }}</td>
+                            <td class="py-3 px-4">
+                                <span class="px-2 py-0.5 rounded font-bold
+                                    {% if unit.blood_group == req.required_blood_group %}bg-emerald-100 text-emerald-800
+                                    {% else %}bg-slate-100 text-slate-800{% endif %}">
+                                    {{ unit.blood_group }}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4 text-slate-700">{{ unit.component }}</td>
+                            <td class="py-3 px-4 text-slate-600">{{ unit.storage_location }}</td>
+                            <td class="py-3 px-4 text-slate-600">{{ unit.expiry_date.strftime('%b %d, %Y') }} ({{ unit.days_until_expiry }} days)</td>
+                            <td class="py-3 px-4">
+                                {% if unit.blood_group == req.required_blood_group %}
+                                    <span class="text-emerald-700 font-semibold text-[11px]">Exact Match</span>
+                                {% else %}
+                                    <span class="text-indigo-700 font-medium text-[11px]">Cross-Compatible ({{ unit.blood_group }})</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4 text-right">
+                                <form action="{{ url_for('requests.allocate_unit', id=req.id, unit_id=unit.id) }}" method="POST" class="inline">
+                                    <button type="submit" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs shadow-sm transition-all">
+                                        Allocate Unit &rarr;
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="py-8 text-center text-slate-400">
+                                No available compatible units currently in stock. Please contact donors or request transfer.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Rejection Action (if pending or approved) -->
+    {% if req.status in ['Pending', 'Approved'] %}
+    <div class="flex justify-end pt-2">
+        <button onclick="document.getElementById('rejectModal').classList.remove('hidden')" class="text-xs font-semibold text-rose-600 hover:text-rose-800 underline">
+            Reject or Cancel this Requisition &rarr;
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Dispatch Modal -->
+<div id="dispatchModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden">
+        <div class="p-6 bg-emerald-600 text-white">
+            <h3 class="text-lg font-bold">Dispatch Blood Units</h3>
+            <p class="text-xs text-emerald-100 mt-1">Confirm physical hand-off of reserved blood units to hospital courier.</p>
+        </div>
+        <form action="{{ url_for('requests.dispatch_request', id=req.id) }}" method="POST" class="p-6 space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Recipient / Pickup Person Name *</label>
+                <input type="text" name="recipient_name" required value="{{ req.contact_person }}"
+                       class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Cold Chain / Dispatch Notes</label>
+                <textarea name="dispatch_notes" rows="2" placeholder="Cold box seal #, transport temperature checked, ambulance / courier name..."
+                          class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+            </div>
+            <div class="flex items-center justify-end space-x-2 pt-2">
+                <button type="button" onclick="document.getElementById('dispatchModal').classList.add('hidden')" class="px-4 py-2 border border-slate-300 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-50">
+                    Cancel
+                </button>
+                <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow transition-all">
+                    Confirm Dispatch
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Reject Modal -->
+<div id="rejectModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden">
+        <div class="p-6 bg-rose-600 text-white">
+            <h3 class="text-lg font-bold">Reject Blood Request</h3>
+            <p class="text-xs text-rose-100 mt-1">State reason for requisition decline or cancellation.</p>
+        </div>
+        <form action="{{ url_for('requests.reject_request', id=req.id) }}" method="POST" class="p-6 space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">Rejection Reason *</label>
+                <textarea name="rejection_reason" required rows="3" placeholder="Stock depletion, patient transferred, cancelled by hospital..."
+                          class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"></textarea>
+            </div>
+            <div class="flex items-center justify-end space-x-2 pt-2">
+                <button type="button" onclick="document.getElementById('rejectModal').classList.add('hidden')" class="px-4 py-2 border border-slate-300 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-50">
+                    Cancel
+                </button>
+                <button type="submit" class="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl shadow transition-all">
+                    Confirm Rejection
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

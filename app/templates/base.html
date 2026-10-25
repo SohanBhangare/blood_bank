@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}LifeFlow - Blood Bank Management{% endblock %}</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fff1f2',
+                            100: '#ffe4e6',
+                            200: '#fecdd3',
+                            500: '#f43f5e',
+                            600: '#e11d48',
+                            700: '#be123c',
+                            800: '#9f1239',
+                            900: '#881337',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+        }
+    </style>
+    {% block head %}{% endblock %}
+</head>
+<body class="h-full flex flex-col text-slate-800 antialiased">
+    <!-- Top Navigation -->
+    <nav class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <!-- Left brand -->
+                <div class="flex items-center space-x-3">
+                    <a href="{{ url_for('main.dashboard') }}" class="flex items-center space-x-2.5 group">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-rose-600 to-red-500 flex items-center justify-center text-white shadow-md shadow-rose-200 group-hover:scale-105 transition-transform">
+                            <i class="fa-solid fa-droplet text-xl"></i>
+                        </div>
+                        <div>
+                            <span class="text-xl font-bold tracking-tight text-slate-900 group-hover:text-rose-600 transition-colors">LifeFlow</span>
+                            <span class="block text-[10px] font-semibold tracking-wider text-rose-600 uppercase -mt-1">Blood Bank System</span>
+                        </div>
+                    </a>
+
+                    {% if current_user.is_authenticated and current_user.is_staff %}
+                    <!-- Quick Links (Desktop Staff) -->
+                    <div class="hidden lg:flex ml-6 space-x-1">
+                        <a href="{{ url_for('main.dashboard') }}" class="px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors {% if request.endpoint == 'main.dashboard' %}bg-rose-50 text-rose-700 font-semibold{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                            <i class="fa-solid fa-gauge-high mr-1 text-[11px]"></i> Dashboard
+                        </a>
+                        <a href="{{ url_for('donors.list_donors') }}" class="px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors {% if 'donors' in request.endpoint %}bg-rose-50 text-rose-700 font-semibold{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                            <i class="fa-solid fa-users mr-1 text-[11px]"></i> Donors
+                        </a>
+                        <a href="{{ url_for('inventory.index') }}" class="px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors {% if 'inventory' in request.endpoint %}bg-rose-50 text-rose-700 font-semibold{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                            <i class="fa-solid fa-boxes-stacked mr-1 text-[11px]"></i> Stock
+                        </a>
+                        <a href="{{ url_for('requests.list_requests') }}" class="px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors {% if 'requests' in request.endpoint %}bg-rose-50 text-rose-700 font-semibold{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                            <i class="fa-solid fa-hand-holding-heart mr-1 text-[11px]"></i> Requests
+                        </a>
+                        <a href="{{ url_for('camps.index') }}" class="px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors {% if 'camps' in request.endpoint %}bg-rose-50 text-rose-700 font-semibold{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                            <i class="fa-solid fa-tent mr-1 text-[11px]"></i> Camps
+                        </a>
+                        <a href="{{ url_for('hospitals.index') }}" class="px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors {% if 'hospitals' in request.endpoint and 'emergency' not in request.endpoint %}bg-rose-50 text-rose-700 font-semibold{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                            <i class="fa-solid fa-hospital mr-1 text-[11px]"></i> Hospitals
+                        </a>
+                        <a href="{{ url_for('reports.index') }}" class="px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors {% if 'reports' in request.endpoint %}bg-rose-50 text-rose-700 font-semibold{% else %}text-slate-600 hover:text-slate-900 hover:bg-slate-100{% endif %}">
+                            <i class="fa-solid fa-chart-pie mr-1 text-[11px]"></i> Reports
+                        </a>
+                    </div>
+                    {% else %}
+                    <!-- Quick Public / Donor Links -->
+                    <div class="hidden md:flex ml-6 space-x-2">
+                        <a href="{{ url_for('camps.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-rose-600 hover:bg-slate-100 flex items-center">
+                            <i class="fa-solid fa-tent mr-1 text-rose-600"></i> Donation Camps
+                        </a>
+                        <a href="{{ url_for('hospitals.index') }}" class="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-700 hover:text-rose-600 hover:bg-slate-100 flex items-center">
+                            <i class="fa-solid fa-hospital mr-1 text-rose-600"></i> Hospitals
+                        </a>
+                        <a href="{{ url_for('hospitals.emergency_feed') }}" class="px-3 py-1.5 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 flex items-center">
+                            <i class="fa-solid fa-triangle-exclamation mr-1 text-rose-600 animate-pulse"></i> Emergency SOS
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Right user info & quick actions -->
+                <div class="flex items-center space-x-3">
+                    {% if current_user.is_authenticated %}
+                        <a href="{{ url_for('hospitals.emergency_feed') }}" class="hidden sm:inline-flex items-center px-3 py-1.5 border border-rose-200 text-xs font-bold rounded-lg text-rose-700 bg-rose-50 hover:bg-rose-100 transition-all">
+                            <i class="fa-solid fa-triangle-exclamation mr-1.5 text-rose-600 animate-pulse"></i> SOS Needs
+                        </a>
+                        {% if current_user.is_staff %}
+                        <a href="{{ url_for('requests.new_request') }}" class="hidden sm:inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-semibold rounded-lg shadow-sm text-white bg-rose-600 hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500 transition-all">
+                            <i class="fa-solid fa-plus mr-1.5"></i> Request
+                        </a>
+                        <a href="{{ url_for('donors.add_donor') }}" class="hidden sm:inline-flex items-center px-3 py-1.5 border border-slate-300 text-xs font-semibold rounded-lg text-slate-700 bg-white hover:bg-slate-50 transition-all">
+                            <i class="fa-solid fa-user-plus mr-1.5 text-rose-600"></i> Donor
+                        </a>
+                        {% endif %}
+
+                        <div class="relative flex items-center space-x-3 pl-3 border-l border-slate-200">
+                            <div class="text-right hidden sm:block">
+                                <div class="text-sm font-semibold text-slate-800 leading-none">{{ current_user.full_name or current_user.username }}</div>
+                                <span class="inline-block mt-0.5 px-2 py-0.5 text-[10px] font-bold rounded-full uppercase tracking-wider
+                                    {% if current_user.role == 'admin' %}bg-purple-100 text-purple-700 border border-purple-200
+                                    {% elif current_user.role == 'staff' %}bg-sky-100 text-sky-700 border border-sky-200
+                                    {% else %}bg-emerald-100 text-emerald-700 border border-emerald-200{% endif %}">
+                                    {{ current_user.role }}
+                                </span>
+                            </div>
+                            <div class="w-9 h-9 rounded-full bg-slate-100 border border-slate-300 flex items-center justify-center text-slate-600 font-bold">
+                                {{ current_user.username[0]|upper }}
+                            </div>
+                            <a href="{{ url_for('auth.logout') }}" title="Logout" class="p-2 text-slate-400 hover:text-rose-600 transition-colors">
+                                <i class="fa-solid fa-arrow-right-from-bracket text-base"></i>
+                            </a>
+                        </div>
+                    {% else %}
+                        <a href="{{ url_for('auth.login') }}" class="text-sm font-medium text-slate-700 hover:text-rose-600 px-3 py-2">Log In</a>
+                        <a href="{{ url_for('auth.register') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-rose-600 hover:bg-rose-700 shadow-sm transition-all">
+                            Register as Donor
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if current_user.is_authenticated and current_user.is_staff %}
+        <!-- Mobile sub-navigation bar -->
+        <div class="lg:hidden border-t border-slate-200 px-2 py-1.5 flex justify-around bg-slate-50 text-[11px] overflow-x-auto">
+            <a href="{{ url_for('main.dashboard') }}" class="px-2 py-1 rounded font-medium text-slate-600 hover:text-rose-600 whitespace-nowrap">
+                <i class="fa-solid fa-gauge-high mr-1"></i> Dashboard
+            </a>
+            <a href="{{ url_for('camps.index') }}" class="px-2 py-1 rounded font-medium text-slate-600 hover:text-rose-600 whitespace-nowrap">
+                <i class="fa-solid fa-tent mr-1"></i> Camps
+            </a>
+            <a href="{{ url_for('hospitals.index') }}" class="px-2 py-1 rounded font-medium text-slate-600 hover:text-rose-600 whitespace-nowrap">
+                <i class="fa-solid fa-hospital mr-1"></i> Hospitals
+            </a>
+            <a href="{{ url_for('hospitals.emergency_feed') }}" class="px-2 py-1 rounded font-bold text-rose-700 hover:text-rose-900 whitespace-nowrap">
+                <i class="fa-solid fa-triangle-exclamation mr-1 animate-pulse"></i> SOS
+            </a>
+            <a href="{{ url_for('donors.list_donors') }}" class="px-2 py-1 rounded font-medium text-slate-600 hover:text-rose-600 whitespace-nowrap">
+                <i class="fa-solid fa-users mr-1"></i> Donors
+            </a>
+            <a href="{{ url_for('inventory.index') }}" class="px-2 py-1 rounded font-medium text-slate-600 hover:text-rose-600 whitespace-nowrap">
+                <i class="fa-solid fa-boxes-stacked mr-1"></i> Stock
+            </a>
+        </div>
+        {% endif %}
+    </nav>
+
+    <!-- Flash message alerts -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 w-full no-print">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    {% set cat_colors = {
+                        'success': 'bg-emerald-50 text-emerald-800 border-emerald-300',
+                        'danger': 'bg-rose-50 text-rose-800 border-rose-300',
+                        'warning': 'bg-amber-50 text-amber-800 border-amber-300',
+                        'info': 'bg-blue-50 text-blue-800 border-blue-300'
+                    } %}
+                    <div class="flex items-center justify-between p-4 mb-3 border rounded-xl text-sm {{ cat_colors.get(category, 'bg-slate-100 text-slate-800 border-slate-300') }} shadow-sm">
+                        <div class="flex items-center space-x-3">
+                            <i class="fa-solid 
+                                {% if category == 'success' %}fa-circle-check text-emerald-600
+                                {% elif category == 'danger' %}fa-circle-exclamation text-rose-600
+                                {% elif category == 'warning' %}fa-triangle-exclamation text-amber-600
+                                {% else %}fa-circle-info text-blue-600{% endif %} text-lg"></i>
+                            <span>{{ message }}</span>
+                        </div>
+                        <button type="button" onclick="this.parentElement.remove()" class="text-slate-400 hover:text-slate-600">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    </div>
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 mt-auto py-6 no-print text-sm text-slate-500">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-3">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-droplet text-rose-600"></i>
+                <span class="font-semibold text-slate-700">LifeFlow Blood Bank Management System</span>
+                <span>&bull;</span>
+                <span>Saving Lives Everyday</span>
+            </div>
+            <div class="text-xs text-slate-400 flex items-center space-x-4">
+                <span>Blood Safety Certified</span>
+                <span>24x7 Emergency Helpline: 1800-BLOOD-HELP</span>
+            </div>
+        </div>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

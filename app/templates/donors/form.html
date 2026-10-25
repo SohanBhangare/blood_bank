@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit Donor Profile' if donor else 'Register New Donor' }} - LifeFlow{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto py-4">
+    <div class="mb-4">
+        <a href="{{ url_for('donors.list_donors') }}" class="text-xs font-semibold text-slate-500 hover:text-slate-800">
+            &larr; Back to Donor Directory
+        </a>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200/80 overflow-hidden">
+        <div class="p-6 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h1 class="text-xl font-bold text-slate-900">{{ 'Edit Donor: ' ~ donor.full_name if donor else 'Register New Blood Donor' }}</h1>
+                <p class="text-xs text-slate-500">Record mandatory medical profile and demographic information.</p>
+            </div>
+            <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+                <i class="fa-solid fa-user-plus"></i>
+            </div>
+        </div>
+
+        <form method="POST" class="p-6 space-y-6">
+            <!-- Personal Info -->
+            <div>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Personal & Contact Info</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">First Name *</label>
+                        <input type="text" name="first_name" required value="{{ donor.first_name if donor else '' }}"
+                               class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Last Name *</label>
+                        <input type="text" name="last_name" required value="{{ donor.last_name if donor else '' }}"
+                               class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Email Address *</label>
+                        <input type="email" name="email" required value="{{ donor.email if donor else '' }}" {% if donor %}readonly class="w-full px-3.5 py-2 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm cursor-not-allowed"{% else %}class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"{% endif %}>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Phone Number *</label>
+                        <input type="tel" name="phone" required value="{{ donor.phone if donor else '' }}" placeholder="+91 98765 43210"
+                               class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Health & Blood Demographics -->
+            <div>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Blood & Medical Criteria</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Blood Group *</label>
+                        <select name="blood_group" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                            {% for bg in blood_groups %}
+                            <option value="{{ bg }}" {% if donor and donor.blood_group == bg %}selected{% endif %}>{{ bg }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Gender *</label>
+                        <select name="gender" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                            <option value="Male" {% if donor and donor.gender == 'Male' %}selected{% endif %}>Male</option>
+                            <option value="Female" {% if donor and donor.gender == 'Female' %}selected{% endif %}>Female</option>
+                            <option value="Other" {% if donor and donor.gender == 'Other' %}selected{% endif %}>Other</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Date of Birth *</label>
+                        <input type="date" name="date_of_birth" required value="{{ donor.date_of_birth.strftime('%Y-%m-%d') if donor and donor.date_of_birth else '' }}"
+                               class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Weight (kg) *</label>
+                        <input type="number" step="0.5" min="40" max="200" name="weight_kg" required value="{{ donor.weight_kg if donor else '65' }}"
+                               class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                        <span class="text-[10px] text-slate-500">Min 50kg</span>
+                    </div>
+                    {% if donor %}
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Donor Status</label>
+                        <select name="status" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                            <option value="Eligible" {% if donor.status == 'Eligible' %}selected{% endif %}>Eligible</option>
+                            <option value="Deferred" {% if donor.status == 'Deferred' %}selected{% endif %}>Deferred</option>
+                            <option value="Inactive" {% if donor.status == 'Inactive' %}selected{% endif %}>Inactive</option>
+                        </select>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Address & Notes -->
+            <div>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Address & Medical History</h3>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div class="sm:col-span-3">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Street Address</label>
+                        <input type="text" name="address" value="{{ donor.address if donor else '' }}" placeholder="Flat, building, area..."
+                               class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">City</label>
+                        <input type="text" name="city" value="{{ donor.city if donor else '' }}" placeholder="Pune"
+                               class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">State</label>
+                        <input type="text" name="state" value="{{ donor.state if donor else '' }}" placeholder="Maharashtra"
+                               class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Pincode</label>
+                        <input type="text" name="pincode" value="{{ donor.pincode if donor else '' }}" placeholder="411001"
+                               class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                    </div>
+                    <div class="sm:col-span-3">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Additional Clinical Notes</label>
+                        <textarea name="medical_notes" rows="2" placeholder="Any allergies or doctor remarks..."
+                                  class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">{{ donor.medical_notes if donor else '' }}</textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Clinical Screening & Medical History Questionnaire -->
+            <div>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Clinical Screening Questionnaire</h3>
+                <div class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs">
+                    <div class="flex items-start space-x-3">
+                        <input type="checkbox" id="has_chronic_illness" name="has_chronic_illness" value="true" {% if donor and donor.has_chronic_illness %}checked{% endif %} class="mt-0.5 rounded text-rose-600 focus:ring-rose-500">
+                        <div class="flex-1">
+                            <label for="has_chronic_illness" class="font-semibold text-slate-800">History of Chronic Illnesses (Diabetes on insulin, Heart disease, Hypertension)?</label>
+                            <input type="text" name="chronic_illness_details" value="{{ donor.chronic_illness_details if donor and donor.chronic_illness_details else '' }}" placeholder="Condition details..." class="mt-1 w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs">
+                        </div>
+                    </div>
+
+                    <div class="flex items-start space-x-3 pt-2 border-t border-slate-200/60">
+                        <input type="checkbox" id="has_recent_surgery" name="has_recent_surgery" value="true" {% if donor and donor.has_recent_surgery %}checked{% endif %} class="mt-0.5 rounded text-rose-600 focus:ring-rose-500">
+                        <label for="has_recent_surgery" class="font-semibold text-slate-800">Surgery or transfusion within past 6 months?</label>
+                    </div>
+
+                    <div class="flex items-start space-x-3 pt-2 border-t border-slate-200/60">
+                        <input type="checkbox" id="has_recent_tattoo_piercing" name="has_recent_tattoo_piercing" value="true" {% if donor and donor.has_recent_tattoo_piercing %}checked{% endif %} class="mt-0.5 rounded text-rose-600 focus:ring-rose-500">
+                        <label for="has_recent_tattoo_piercing" class="font-semibold text-slate-800">Tattoo or piercing within past 6 months?</label>
+                    </div>
+
+                    <div class="flex items-start space-x-3 pt-2 border-t border-slate-200/60">
+                        <input type="checkbox" id="on_medications" name="on_medications" value="true" {% if donor and donor.on_medications %}checked{% endif %} class="mt-0.5 rounded text-rose-600 focus:ring-rose-500">
+                        <div class="flex-1">
+                            <label for="on_medications" class="font-semibold text-slate-800">Taking medications (blood thinners, antibiotics, etc.)?</label>
+                            <input type="text" name="medications_details" value="{{ donor.medications_details if donor and donor.medications_details else '' }}" placeholder="Medications..." class="mt-1 w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs">
+                        </div>
+                    </div>
+
+                    <div class="flex items-start space-x-3 pt-2 border-t border-slate-200/60">
+                        <input type="checkbox" id="has_infectious_history" name="has_infectious_history" value="true" {% if donor and donor.has_infectious_history %}checked{% endif %} class="mt-0.5 rounded text-rose-600 focus:ring-rose-500">
+                        <label for="has_infectious_history" class="font-semibold text-slate-800">History of infectious diseases (Hepatitis B/C, HIV, Malaria)?</label>
+                    </div>
+
+                    <div class="flex items-start space-x-3 pt-2 border-t border-slate-200/60">
+                        <input type="checkbox" id="is_pregnant_or_nursing" name="is_pregnant_or_nursing" value="true" {% if donor and donor.is_pregnant_or_nursing %}checked{% endif %} class="mt-0.5 rounded text-rose-600 focus:ring-rose-500">
+                        <label for="is_pregnant_or_nursing" class="font-semibold text-slate-800">Pregnant or currently nursing?</label>
+                    </div>
+                </div>
+            </div>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-slate-100 flex items-center justify-end space-x-3">
+                <a href="{{ url_for('donors.list_donors') }}" class="px-4 py-2 border border-slate-300 text-slate-700 text-xs font-semibold rounded-xl hover:bg-slate-50">
+                    Cancel
+                </a>
+                <button type="submit" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs rounded-xl shadow-md shadow-rose-200 transition-all">
+                    {{ 'Update Donor Details' if donor else 'Register Donor' }}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

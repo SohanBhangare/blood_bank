@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+
+{% block title %}{{ donor.full_name }} - Donor Profile - LifeFlow{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div class="flex items-center justify-between">
+        <a href="{{ url_for('donors.list_donors') }}" class="text-xs font-semibold text-slate-500 hover:text-slate-800">
+            &larr; Back to Donor Directory
+        </a>
+        <div class="flex items-center space-x-2">
+            <a href="{{ url_for('donors.certificate', id=donor.id) }}" target="_blank" class="inline-flex items-center px-3 py-1.5 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 shadow-sm">
+                <i class="fa-solid fa-award mr-1.5 text-amber-500"></i> Donation Certificate
+            </a>
+            <a href="{{ url_for('donors.edit_donor', id=donor.id) }}" class="inline-flex items-center px-3 py-1.5 border border-slate-300 rounded-xl text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 shadow-sm">
+                <i class="fa-solid fa-pen-to-square mr-1.5"></i> Edit
+            </a>
+            {% if current_user.is_admin %}
+            <form action="{{ url_for('donors.delete_donor', id=donor.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to delete this donor and all their records?');" class="inline">
+                <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50" title="Delete Donor">
+                    <i class="fa-solid fa-trash-can text-sm"></i>
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Main Donor Profile Card -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-6 bg-gradient-to-r from-slate-900 to-slate-800 text-white flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="flex items-center space-x-4">
+                <div class="w-16 h-16 rounded-2xl bg-rose-600 flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-rose-900/40">
+                    {{ donor.blood_group }}
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold">{{ donor.full_name }}</h1>
+                    <div class="text-xs text-slate-300 mt-0.5 flex flex-wrap gap-x-3 gap-y-1">
+                        <span><i class="fa-solid fa-venus-mars mr-1 text-slate-400"></i> {{ donor.gender }}, {{ donor.age }} yrs</span>
+                        <span><i class="fa-solid fa-weight-scale mr-1 text-slate-400"></i> {{ donor.weight_kg }} kg</span>
+                        <span><i class="fa-solid fa-location-dot mr-1 text-slate-400"></i> {{ donor.city or 'Not specified' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Eligibility Indicator & Action -->
+            <div class="flex flex-col sm:items-end gap-2">
+                {% if is_eligible %}
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        <i class="fa-solid fa-circle-check mr-1.5 text-emerald-400"></i> Currently Eligible to Donate
+                    </span>
+                    <a href="{{ url_for('donors.record_donation', id=donor.id) }}" class="inline-flex items-center px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-md shadow-rose-950/50 transition-all">
+                        <i class="fa-solid fa-plus mr-1.5"></i> Record Blood Donation
+                    </a>
+                {% else %}
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                        <i class="fa-solid fa-triangle-exclamation mr-1.5 text-amber-400"></i> Temporarily Deferred
+                    </span>
+                    <span class="text-[11px] text-slate-300 max-w-xs sm:text-right">{{ eligibility_msg }}</span>
+                    <a href="{{ url_for('donors.record_donation', id=donor.id) }}" class="inline-flex items-center px-3 py-1 rounded-lg text-xs font-semibold bg-slate-700 hover:bg-slate-600 text-slate-200 transition-all">
+                        Record with Override &rarr;
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Details Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-100 p-6 text-xs">
+            <div class="space-y-3 pb-4 md:pb-0 md:pr-4">
+                <span class="font-bold text-slate-400 uppercase tracking-wider block text-[10px]">Contact Information</span>
+                <div>
+                    <span class="text-slate-500 block">Phone</span>
+                    <span class="font-semibold text-slate-900 text-sm">{{ donor.phone }}</span>
+                </div>
+                <div>
+                    <span class="text-slate-500 block">Email</span>
+                    <span class="font-semibold text-slate-900">{{ donor.email }}</span>
+                </div>
+                <div>
+                    <span class="text-slate-500 block">Address</span>
+                    <span class="font-medium text-slate-800">{{ donor.address or '-' }}, {{ donor.city or '' }} {{ donor.pincode or '' }}</span>
+                </div>
+            </div>
+
+            <div class="space-y-3 py-4 md:py-0 md:px-4">
+                <span class="font-bold text-slate-400 uppercase tracking-wider block text-[10px]">Donation Statistics</span>
+                <div class="grid grid-cols-2 gap-2">
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                        <span class="text-slate-500 block text-[10px]">Total Donations</span>
+                        <span class="text-xl font-black text-rose-600">{{ donor.total_donations }}</span>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                        <span class="text-slate-500 block text-[10px]">Estimated Lives Saved</span>
+                        <span class="text-xl font-black text-emerald-600">{{ donor.total_donations * 3 }}</span>
+                    </div>
+                </div>
+                <div>
+                    <span class="text-slate-500 block">Last Donation Date</span>
+                    <span class="font-semibold text-slate-900">
+                        {{ donor.last_donation_date.strftime('%B %d, %Y') if donor.last_donation_date else 'None recorded' }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="space-y-3 pt-4 md:pt-0 md:pl-4">
+                <span class="font-bold text-slate-400 uppercase tracking-wider block text-[10px]">Medical Notes & Flags</span>
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    <p class="text-slate-600 italic">
+                        {{ donor.medical_notes or 'No medical alerts or adverse donation reactions reported.' }}
+                    </p>
+                </div>
+                <div class="text-[11px] text-slate-400">
+                    Registered on {{ donor.created_at.strftime('%b %d, %Y') }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Donation History -->
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h3 class="text-base font-bold text-slate-900">Donation History Log</h3>
+                <p class="text-xs text-slate-500">Chronological history of blood units donated by {{ donor.full_name }}</p>
+            </div>
+            <a href="{{ url_for('donors.record_donation', id=donor.id) }}" class="inline-flex items-center px-3 py-1.5 rounded-xl bg-rose-50 text-rose-700 text-xs font-semibold hover:bg-rose-100 transition-colors">
+                <i class="fa-solid fa-plus mr-1 text-[10px]"></i> New Donation
+            </a>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-bold uppercase tracking-wider text-[11px]">
+                        <th class="py-3 px-4">Date</th>
+                        <th class="py-3 px-4">Bag Barcode</th>
+                        <th class="py-3 px-4">Component</th>
+                        <th class="py-3 px-4">Vitals (BP / Hb)</th>
+                        <th class="py-3 px-4">Screening</th>
+                        <th class="py-3 px-4">Logged By</th>
+                        <th class="py-3 px-4">Inventory Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100">
+                    {% if donations %}
+                        {% for don in donations %}
+                        <tr class="hover:bg-slate-50/80">
+                            <td class="py-3 px-4 font-bold text-slate-900">
+                                {{ don.donation_date.strftime('%b %d, %Y') }}
+                            </td>
+                            <td class="py-3 px-4 font-mono font-semibold text-rose-700">
+                                {{ don.bag_barcode }}
+                            </td>
+                            <td class="py-3 px-4 text-slate-700">
+                                {{ don.component }} ({{ don.units }} unit)
+                            </td>
+                            <td class="py-3 px-4 text-slate-600">
+                                {% if don.systolic_bp and don.diastolic_bp %}
+                                    {{ don.systolic_bp }}/{{ don.diastolic_bp }} mmHg &bull; {{ don.hemoglobin_level }} g/dL
+                                {% else %}
+                                    <span class="text-slate-400">Normal</span>
+                                {% endif %}
+                            </td>
+                            <td class="py-3 px-4">
+                                <span class="px-2 py-0.5 rounded-full font-semibold border text-[10px] {{ don.screening_status|badge_status }}">
+                                    {{ don.screening_status }}
+                                </span>
+                            </td>
+                            <td class="py-3 px-4 text-slate-500">
+                                {{ don.recorder.full_name if don.recorder else 'Staff' }}
+                            </td>
+                            <td class="py-3 px-4">
+                                {% set inv = don.inventory_items.first() %}
+                                {% if inv %}
+                                    <span class="px-2 py-0.5 rounded-full font-semibold border text-[10px] {{ inv.status|badge_status }}">
+                                        {{ inv.status }}
+                                    </span>
+                                {% else %}
+                                    <span class="text-slate-400 text-[10px]">Archived</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="py-8 text-center text-slate-400">
+                                No previous donations on record for this donor.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

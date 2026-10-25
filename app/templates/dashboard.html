@@ -1,0 +1,461 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - LifeFlow Blood Bank{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Top Greeting & Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-black tracking-tight text-slate-900">Hospital Blood Operations Center</h1>
+            <p class="text-slate-500 text-sm">Real-time inventory levels, donor activities, and emergency dispatch tracking.</p>
+        </div>
+        <div class="flex items-center space-x-2">
+            {% if current_user.is_admin %}
+            <a href="{{ url_for('main.seed_demo') }}" class="inline-flex items-center px-3 py-2 border border-slate-300 text-xs font-semibold rounded-xl text-slate-700 bg-white hover:bg-slate-50 shadow-sm transition-all" title="Reload sample data if needed">
+                <i class="fa-solid fa-arrows-rotate mr-1.5 text-slate-500"></i> Reset/Seed Demo
+            </a>
+            {% endif %}
+            <a href="{{ url_for('requests.new_request') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-semibold rounded-xl text-white bg-rose-600 hover:bg-rose-700 shadow-md shadow-rose-200 transition-all">
+                <i class="fa-solid fa-plus mr-1.5"></i> New Blood Request
+            </a>
+        </div>
+    </div>
+
+    <!-- Urgent Alerts Banner -->
+    {% if emergency_requests > 0 %}
+    <div class="bg-rose-50 border-l-4 border-rose-600 p-4 rounded-xl shadow-sm flex items-start sm:items-center justify-between gap-3">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 flex-shrink-0 animate-bounce">
+                <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+            </div>
+            <div>
+                <h4 class="text-sm font-bold text-rose-900">CRITICAL: {{ emergency_requests }} Emergency Blood Request(s) Pending!</h4>
+                <p class="text-xs text-rose-700">Immediate hospital attention required. Check pending emergency allocations now.</p>
+            </div>
+        </div>
+        <a href="{{ url_for('requests.list_requests', urgency='Emergency', status='Pending') }}" class="px-3.5 py-1.5 text-xs font-bold rounded-lg bg-rose-600 text-white hover:bg-rose-700 shadow-sm transition-all whitespace-nowrap">
+            View Emergency Requests
+        </a>
+    </div>
+    {% endif %}
+
+    {% if critical_groups %}
+    <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-xl shadow-sm flex items-center justify-between gap-3">
+        <div class="flex items-center space-x-3">
+            <i class="fa-solid fa-circle-exclamation text-amber-500 text-xl"></i>
+            <span class="text-xs sm:text-sm text-amber-900 font-medium">
+                <strong>Low Stock Alert:</strong>
+                {% for item in critical_groups %}
+                    <span class="inline-flex items-center px-2 py-0.5 rounded font-bold bg-amber-100 text-amber-800 ml-1">
+                        {{ item.group }}: {{ item.count }} unit{{ 's' if item.count != 1 else '' }}
+                    </span>
+                {% endfor %}
+            </span>
+        </div>
+        <a href="{{ url_for('donors.list_donors') }}" class="text-xs font-semibold text-amber-800 hover:underline whitespace-nowrap">
+            Find Donors &rarr;
+        </a>
+    </div>
+    {% endif %}
+
+    <!-- KPI Metric Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Available Units -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Available In Stock</span>
+                    <div class="text-3xl font-black text-slate-900 mt-1">{{ total_available_units }} <span class="text-sm font-semibold text-slate-500">Units</span></div>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600">
+                    <i class="fa-solid fa-droplet text-2xl"></i>
+                </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span class="text-slate-500">Active ready supply</span>
+                <a href="{{ url_for('inventory.index', status='Available') }}" class="font-semibold text-rose-600 hover:text-rose-700">View inventory &rarr;</a>
+            </div>
+        </div>
+
+        <!-- Registered Donors -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Registered Donors</span>
+                    <div class="text-3xl font-black text-slate-900 mt-1">{{ total_donors }}</div>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600">
+                    <i class="fa-solid fa-users text-2xl"></i>
+                </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span class="text-slate-500">{{ total_donations }} total donations</span>
+                <a href="{{ url_for('donors.list_donors') }}" class="font-semibold text-emerald-600 hover:text-emerald-700">Donor list &rarr;</a>
+            </div>
+        </div>
+
+        <!-- Pending Requests -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Pending Requests</span>
+                    <div class="text-3xl font-black text-slate-900 mt-1">{{ pending_requests }}</div>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-600">
+                    <i class="fa-solid fa-clock text-2xl"></i>
+                </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span class="text-rose-600 font-bold">{{ emergency_requests }} emergency</span>
+                <a href="{{ url_for('requests.list_requests', status='Pending') }}" class="font-semibold text-amber-600 hover:text-amber-700">Process requests &rarr;</a>
+            </div>
+        </div>
+
+        <!-- Expiring Soon -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">Expiring in 7 Days</span>
+                    <div class="text-3xl font-black text-slate-900 mt-1">{{ expiring_soon_count }}</div>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-purple-50 border border-purple-100 flex items-center justify-center text-purple-600">
+                    <i class="fa-solid fa-calendar-xmark text-2xl"></i>
+                </div>
+            </div>
+            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
+                <span class="text-slate-500">Requires dispatch priority</span>
+                <a href="{{ url_for('inventory.index') }}" class="font-semibold text-purple-600 hover:text-purple-700">Check batch &rarr;</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Blood Group Stock Status Visualizer -->
+    <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-2">
+            <div>
+                <h3 class="text-base font-bold text-slate-900 flex items-center">
+                    <i class="fa-solid fa-cubes text-rose-600 mr-2"></i> Current Blood Group Inventory Levels
+                </h3>
+                <p class="text-xs text-slate-500">Click any blood group to filter ready units or find matched donors.</p>
+            </div>
+            <div class="flex items-center space-x-3 text-xs text-slate-500">
+                <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500 mr-1.5"></span> Optimal (&ge;5)</span>
+                <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-amber-500 mr-1.5"></span> Low (3-4)</span>
+                <span class="flex items-center"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 mr-1.5"></span> Critical (&lt;3)</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mt-4">
+            {% for bg in blood_groups %}
+            {% set count = stock_counts[bg] %}
+            <a href="{{ url_for('inventory.index', blood_group=bg, status='Available') }}" 
+               class="group p-3.5 rounded-xl border transition-all text-center relative overflow-hidden
+               {% if count < 3 %}border-rose-300 bg-rose-50/50 hover:bg-rose-50 hover:shadow-md
+               {% elif count < 5 %}border-amber-300 bg-amber-50/50 hover:bg-amber-50 hover:shadow-md
+               {% else %}border-slate-200 bg-slate-50/50 hover:bg-slate-100 hover:shadow-md{% endif %}">
+                <div class="text-xs font-black px-2 py-0.5 rounded-md inline-block uppercase tracking-wider
+                    {% if count < 3 %}bg-rose-100 text-rose-800
+                    {% elif count < 5 %}bg-amber-100 text-amber-800
+                    {% else %}bg-slate-200 text-slate-800{% endif %}">
+                    {{ bg }}
+                </div>
+                <div class="mt-2 text-2xl font-black text-slate-900 group-hover:scale-110 transition-transform">
+                    {{ count }}
+                </div>
+                <div class="text-[10px] font-semibold text-slate-500 uppercase mt-0.5">Units</div>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Live Community Camps & Nearby Emergency SOS Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Ongoing Camps -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col justify-between">
+            <div>
+                <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                            <h3 class="text-base font-bold text-slate-900">Ongoing Blood Donation Camps Today</h3>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-0.5">Mobile vans and community drives currently active</p>
+                    </div>
+                    <a href="{{ url_for('camps.index') }}" class="text-xs font-semibold text-rose-600 hover:underline">View all ({{ total_camps }}) &rarr;</a>
+                </div>
+                <div class="divide-y divide-slate-100">
+                    {% if ongoing_camps %}
+                        {% for camp in ongoing_camps %}
+                        <div class="p-4 hover:bg-slate-50/80 transition-colors">
+                            <div class="flex items-start justify-between gap-3">
+                                <div class="flex items-start space-x-3">
+                                    <div class="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold text-base flex-shrink-0 mt-0.5">
+                                        <i class="fa-solid fa-tent"></i>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-sm font-bold text-slate-900">{{ camp.name }}</h4>
+                                        <div class="text-xs text-slate-500 flex items-center space-x-1.5 mt-0.5">
+                                            <i class="fa-solid fa-location-dot text-rose-600 text-[10px]"></i>
+                                            <span>{{ camp.venue }}, {{ camp.city }}</span>
+                                        </div>
+                                        <div class="text-[11px] text-slate-400 mt-0.5">
+                                            Time: <strong class="text-slate-700">{{ camp.operating_hours }}</strong> &bull; Org: {{ camp.organizer }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                                    Active Today
+                                </span>
+                            </div>
+                            <div class="mt-3 flex items-center justify-between text-xs pt-2 border-t border-slate-50">
+                                <span class="text-[11px] text-slate-500">Call: {{ camp.contact_phone }}</span>
+                                <a href="https://maps.google.com/?q={{ camp.venue|urlencode }}+{{ camp.city|urlencode }}" target="_blank" class="text-rose-600 hover:text-rose-800 font-bold text-[11px] flex items-center">
+                                    <i class="fa-solid fa-diamond-turn-right mr-1"></i> Directions
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="p-8 text-center text-slate-400 text-xs">
+                            No donation camps running today. <a href="{{ url_for('camps.index') }}" class="text-rose-600 font-bold">Check upcoming camps &rarr;</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="p-3.5 bg-slate-50 border-t border-slate-100 text-right">
+                <a href="{{ url_for('camps.index') }}" class="text-xs font-semibold text-slate-700 hover:text-slate-900">
+                    Explore all donation camps &rarr;
+                </a>
+            </div>
+        </div>
+
+        <!-- Nearby Emergency SOS -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col justify-between">
+            <div>
+                <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="w-2 h-2 rounded-full bg-rose-600 animate-pulse"></span>
+                            <h3 class="text-base font-bold text-slate-900">Nearby Hospital Emergency SOS</h3>
+                        </div>
+                        <p class="text-xs text-slate-500 mt-0.5">Critical transfusion requirements at nearby medical centers</p>
+                    </div>
+                    <a href="{{ url_for('hospitals.emergency_feed') }}" class="text-xs font-semibold text-rose-600 hover:underline">SOS Feed &rarr;</a>
+                </div>
+                <div class="divide-y divide-slate-100">
+                    {% if nearby_emergencies %}
+                        {% for em in nearby_emergencies %}
+                        <div class="p-4 hover:bg-slate-50/80 transition-colors flex items-center justify-between gap-3">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-rose-600 to-red-600 text-white flex flex-col items-center justify-center font-black text-sm flex-shrink-0 shadow-sm">
+                                    <span>{{ em.required_blood_group }}</span>
+                                    <span class="text-[8px] font-normal uppercase -mt-1">SOS</span>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-bold text-slate-900">{{ em.hospital_name }}</div>
+                                    <div class="text-xs text-slate-500">Need {{ em.units_requested - em.units_allocated }} unit(s) &bull; {{ em.diagnosis_reason or 'Emergency Surgery' }}</div>
+                                    <div class="text-[11px] text-rose-700 font-semibold mt-0.5">
+                                        <i class="fa-solid fa-phone mr-1"></i> Helpline: <a href="tel:{{ em.contact_phone }}" class="underline">{{ em.contact_phone }}</a>
+                                    </div>
+                                </div>
+                            </div>
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-bold border {{ em.urgency|badge_status }}">
+                                {{ em.urgency }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="p-8 text-center text-slate-400 text-xs">
+                            No critical emergency requisitions pending right now.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="p-3.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs">
+                <a href="{{ url_for('hospitals.index') }}" class="text-slate-600 hover:text-slate-900 font-medium">
+                    <i class="fa-solid fa-hospital mr-1 text-rose-600"></i> Partner Hospitals ({{ total_hospitals }})
+                </a>
+                <a href="{{ url_for('hospitals.emergency_feed') }}" class="text-rose-600 hover:text-rose-800 font-bold">
+                    View Live SOS Board &rarr;
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Stock Chart -->
+        <div class="lg:col-span-2 bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm">
+            <h3 class="text-base font-bold text-slate-900 mb-1 flex items-center">
+                <i class="fa-solid fa-chart-column text-rose-600 mr-2"></i> Blood Inventory Breakdown
+            </h3>
+            <p class="text-xs text-slate-500 mb-4">Stock units available for immediate emergency transfusions.</p>
+            <div class="h-64">
+                <canvas id="bloodStockChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Quick Blood Compatibility Guide Card -->
+        <div class="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-2xl text-white shadow-sm flex flex-col justify-between">
+            <div>
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-xs font-bold text-rose-400 uppercase tracking-wider">Quick Reference</span>
+                    <i class="fa-solid fa-dna text-slate-400"></i>
+                </div>
+                <h4 class="text-lg font-bold">Universal Blood Matrix</h4>
+                <p class="text-xs text-slate-300 mt-1 mb-4 leading-relaxed">
+                    Essential transfusion compatibility rules for rapid medical dispatch decisions.
+                </p>
+
+                <div class="space-y-3">
+                    <div class="p-3 bg-white/10 rounded-xl border border-white/10">
+                        <div class="flex items-center justify-between text-xs font-bold">
+                            <span class="text-rose-300">O Negative (O-)</span>
+                            <span class="bg-rose-500/30 text-rose-200 px-2 py-0.5 rounded text-[10px]">Universal Donor</span>
+                        </div>
+                        <p class="text-[11px] text-slate-300 mt-1">Can donate red cells to ANY blood type. Vital for trauma resuscitation.</p>
+                    </div>
+
+                    <div class="p-3 bg-white/10 rounded-xl border border-white/10">
+                        <div class="flex items-center justify-between text-xs font-bold">
+                            <span class="text-sky-300">AB Positive (AB+)</span>
+                            <span class="bg-sky-500/30 text-sky-200 px-2 py-0.5 rounded text-[10px]">Universal Recipient</span>
+                        </div>
+                        <p class="text-[11px] text-slate-300 mt-1">Can safely receive red blood cells from ANY blood group.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-700/60 flex items-center justify-between text-xs">
+                <span class="text-slate-400">Automated compatibility in requests</span>
+                <a href="{{ url_for('requests.list_requests') }}" class="text-rose-400 hover:text-rose-300 font-semibold">View Requests &rarr;</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activities Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Recent Requests -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 flex items-center">
+                        <i class="fa-solid fa-truck-medical text-rose-600 mr-2"></i> Recent Hospital Blood Requests
+                    </h3>
+                    <p class="text-xs text-slate-500">Latest requisition orders from local hospitals</p>
+                </div>
+                <a href="{{ url_for('requests.list_requests') }}" class="text-xs font-semibold text-rose-600 hover:underline">View all</a>
+            </div>
+            <div class="divide-y divide-slate-100">
+                {% if recent_requests %}
+                    {% for req in recent_requests %}
+                    <div class="p-4 hover:bg-slate-50/80 transition-colors flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm
+                                {% if req.required_blood_group in ['O-', 'AB-'] %}bg-rose-100 text-rose-800
+                                {% else %}bg-slate-100 text-slate-800{% endif %}">
+                                {{ req.required_blood_group }}
+                            </div>
+                            <div>
+                                <div class="text-sm font-bold text-slate-900">{{ req.patient_name }}</div>
+                                <div class="text-xs text-slate-500">{{ req.hospital_name }} &bull; {{ req.units_requested }} unit(s)</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2.5 py-1 text-xs font-semibold rounded-full border {{ req.status|badge_status }}">
+                                {{ req.status }}
+                            </span>
+                            <a href="{{ url_for('requests.view_request', id=req.id) }}" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-slate-100" title="Process request">
+                                <i class="fa-solid fa-arrow-right text-xs"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="p-8 text-center text-slate-400 text-sm">No blood requests logged yet.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Donations -->
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900 flex items-center">
+                        <i class="fa-solid fa-heart-circle-check text-rose-600 mr-2"></i> Recent Blood Donations
+                    </h3>
+                    <p class="text-xs text-slate-500">Latest collections verified and stored</p>
+                </div>
+                <a href="{{ url_for('donors.list_donors') }}" class="text-xs font-semibold text-rose-600 hover:underline">View donors</a>
+            </div>
+            <div class="divide-y divide-slate-100">
+                {% if recent_donations %}
+                    {% for d in recent_donations %}
+                    <div class="p-4 hover:bg-slate-50/80 transition-colors flex items-center justify-between">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center font-bold text-sm text-emerald-700">
+                                {{ d.blood_group }}
+                            </div>
+                            <div>
+                                <div class="text-sm font-bold text-slate-900">{{ d.donor.full_name }}</div>
+                                <div class="text-xs font-mono text-slate-400">{{ d.bag_barcode }} &bull; {{ d.donation_date.strftime('%b %d, %Y') }}</div>
+                            </div>
+                        </div>
+                        <div>
+                            <span class="px-2.5 py-1 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                <i class="fa-solid fa-check text-[10px] mr-1"></i> Screened
+                            </span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="p-8 text-center text-slate-400 text-sm">No donations logged yet.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const ctx = document.getElementById('bloodStockChart').getContext('2d');
+    const bloodLabels = {{ blood_groups|tojson }};
+    const bloodValues = bloodLabels.map(bg => {{ stock_counts|tojson }}[bg] || 0);
+
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: bloodLabels,
+            datasets: [{
+                label: 'Available Units in Stock',
+                data: bloodValues,
+                backgroundColor: [
+                    '#e11d48', '#f43f5e', '#fb7185', '#fda4af',
+                    '#0284c7', '#38bdf8', '#059669', '#34d399'
+                ],
+                borderRadius: 8,
+                borderSkipped: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: { precision: 0, stepSize: 1 },
+                    grid: { color: '#f1f5f9' }
+                },
+                x: {
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}
